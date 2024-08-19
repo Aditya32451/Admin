@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Coaches</title>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+            background: url(Images/hs01.jpg) no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+
+        .nav-bar {
+            background-color: #990000;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .nav-bar a {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+
+        .nav-bar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .container {
+            max-width: 90%;
+            margin: 20px auto;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid white;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #990000;
+        }
+
+        td {
+            background-color: #333;
+        }
+
+        button {
+            background-color: #990000;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+
+        button:hover {
+            background-color: #660000;
+        }
+
+        #editForm {
+            display: none;
+            background-color: #333;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        #editForm input,
+        #editForm select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .checkbox-item {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav-bar">
+        <a href="AdminDashboard.html">Dashboard</a>
+        <a href="AdminManageCoaches.html">Manage Coaches</a>
+        <a href="AdminManageStudents.html">Manage Students</a>
+        <a href="AdminManageECAs.html">Manage ECAs</a>
+        <a href="AdminSystemSettings.html">System Settings</a>
+        <a href="AdminActivityLog.html">Activity Log</a>
+        <a href="AdminProfile.html">Profile</a>
+    </div>
+    
+    <div class="container">
+        <h1>Manage Coaches</h1>
+        <table id="coachesTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="coachesList"></tbody>
+        </table>
+        <div id="editForm">
+            <h2>Edit Coach</h2>
+            <div id="formFields">
+                <div>
+                    <label>Name</label>
+                    <input type="text" id="Name">
+                </div>
+            </div>
+            <div id="ecaCheckboxes"></div>
+            <button id="saveChangesButton">Save Changes</button>
+            <button id="cancelButton">Cancel</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgwQZwXyDCdC9n2qOYH1mWX22KujsG5Ys",
+            authDomain: "eca-program.firebaseapp.com",
+            projectId: "eca-program",
+            storageBucket: "eca-program.appspot.com",
+            messagingSenderId: "116171510985",
+            appId: "1:116171510985:web:12baf1351a622460b22918"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const loadCoaches = async () => {
+            try {
+                const coachesSnapshot = await getDocs(collection(db, "coachInfo"));
+                const coachesList = document.getElementById("coachesList");
+                coachesList.innerHTML = "";
+                coachesSnapshot.forEach(doc => {
+                    const coachData = doc.data();
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${coachData.Name || "N/A"}</td>
+                        <td>${coachData.Email || "N/A"}</td>
+                        <td><button onclick="editCoach('${doc.id}')">Edit</button></td>
+                    `;
+                    coachesList.appendChild(tr);
+                });
+            } catch (error) {
+                console.error("Error loading coaches: ", error);
+            }
+        };
+
+        window.editCoach = async (coachId) => {
+            try {
+                const coachDocRef = doc(db, "coachInfo", coachId);
+                const coachDocSnap = await getDoc(coachDocRef);
+
+                if (coachDocSnap.exists()) {
+                    const coachData = coachDocSnap.data();
+                    const adminDocRef = doc(db, "adminInfo", "doc");
+                    const adminDocSnap = await getDoc(adminDocRef);
+                    if (adminDocSnap.exists()) {
+                        const coachDetails = adminDocSnap.data().CoachDetails || [];
+                        const formFields = document.getElementById("formFields");
+
+                        // Populate Name field
+                        document.getElementById("Name").value = coachData.Name || "";
+
+                        // Populate other fields from CoachDetails array
+                        formFields.innerHTML = `<div>
+                            <label>Name</label>
+                            <input type="text" id="Name" value="${coachData.Name || ''}">
+                        </div>`;
+
+                        coachDetails.forEach(field => {
+                            const inputGroup = document.createElement("div");
+                            inputGroup.innerHTML = `
+                                <label>${field}</label>
+                                <input type="text" id="${field}" value="${coachData[field] || ''}">
+                            `;
+                            formFields.appendChild(inputGroup);
+                        });
+
+                        const ecaCheckboxes = document.getElementById("ecaCheckboxes");
+                        ecaCheckboxes.innerHTML = "<h3>Manage ECAs</h3>";
+
+                        const ecaSnapshot = await getDocs(collection(db, "ecaInfo"));
+                        ecaSnapshot.forEach(ecaDoc => {
+                            const ecaData = ecaDoc.data();
+                            const checkboxItem = document.createElement("div");
+                            checkboxItem.classList.add("checkbox-item");
+
+                            const checkbox = document.createElement("input");
+                            checkbox.type = "checkbox";
+                            checkbox.value = ecaDoc.id;
+                            checkbox.checked = coachData.ECAs && coachData.ECAs.includes(ecaDoc.id);
+
+                            const label = document.createElement("label");
+                            label.textContent = ecaData.Name || ecaDoc.id;
+
+                            checkboxItem.appendChild(label);
+                            checkboxItem.appendChild(checkbox);
+                            ecaCheckboxes.appendChild(checkboxItem);
+                        });
+
+                        document.getElementById("editForm").style.display = "block";
+
+                        document.getElementById("saveChangesButton").onclick = async () => {
+                            const updatedData = {
+                                Name: document.getElementById("Name").value
+                            };
+
+                            coachDetails.forEach(field => {
+                                updatedData[field] = document.getElementById(field).value;
+                            });
+
+                            const selectedECAs = Array.from(document.querySelectorAll("#ecaCheckboxes input:checked")).map(checkbox => checkbox.value);
+                            updatedData.ECAs = selectedECAs;
+
+                            await updateDoc(coachDocRef, updatedData);
+                            alert("Coach details updated successfully.");
+                            document.getElementById("editForm").style.display = "none";
+                            loadCoaches();
+                        };
+
+                        document.getElementById("cancelButton").onclick = () => {
+                            document.getElementById("editForm").style.display = "none";
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error("Error editing coach: ", error);
+            }
+        };
+
+        loadCoaches();
+    </script>
+</body>
+
+</html>

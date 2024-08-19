@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+            background: url(Images/hs01.jpg) no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: rgba(139, 0, 0, 0.8);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 36px;
+            color: #ffffff;
+        }
+
+        .totals {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+
+        .total {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .totals .box {
+            width: 30%;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .navigation {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+
+        .navigation .nav-item {
+            width: 45%;
+            margin: 10px 0;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            transition: background-color 0.3s, color 0.3s;
+            text-align: center;
+            cursor: pointer;
+            color: #8B0000; /* Deep Red for text */
+        }
+
+        .navigation .nav-item:hover {
+            background-color: rgba(139, 0, 0, 0.7);
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <h1>Admin Dashboard</h1>
+        <div class="totals">
+            <div class="box">
+                <div class="total" id="totalECAs">Total ECAs: 0</div>
+            </div>
+            <div class="box">
+                <div class="total" id="totalStudents">Total Students: 0</div>
+            </div>
+            <div class="box">
+                <div class="total" id="totalCoaches">Total Coaches: 0</div>
+            </div>
+        </div>
+        <div class="navigation">
+            <div class="nav-item" onclick="window.location.href='AdminManageCoaches.html'">Manage Coaches</div>
+            <div class="nav-item" onclick="window.location.href='AdminManageStudents.html'">Manage Students</div>
+            <div class="nav-item" onclick="window.location.href='AdminManageECAs.html'">Manage ECAs</div>
+            <div class="nav-item" onclick="window.location.href='AdminSystemSettings.html'">System Settings</div>
+            <div class="nav-item" onclick="window.location.href='AdminActivityLog.html'">Activity Log</div>
+            <div class="nav-item" onclick="window.location.href='AdminProfile.html'">Profile</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgwQZwXyDCdC9n2qOYH1mWX22KujsG5Ys",
+            authDomain: "eca-program.firebaseapp.com",
+            projectId: "eca-program",
+            storageBucket: "eca-program.appspot.com",
+            messagingSenderId: "116171510985",
+            appId: "1:116171510985:web:12baf1351a622460b22918"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const updateTotals = async () => {
+            try {
+                const ecaCollection = await getDocs(collection(db, "ecaInfo"));
+                const studentCollection = await getDocs(collection(db, "studentInfo"));
+                const coachCollection = await getDocs(collection(db, "coachInfo"));
+
+                document.getElementById("totalECAs").textContent = `Total ECAs: ${ecaCollection.size}`;
+                document.getElementById("totalStudents").textContent = `Total Students: ${studentCollection.size}`;
+                document.getElementById("totalCoaches").textContent = `Total Coaches: ${coachCollection.size}`;
+            } catch (error) {
+                console.error("Error fetching totals: ", error);
+            }
+        };
+
+        document.addEventListener("DOMContentLoaded", updateTotals);
+    </script>
+</body>
+
+</html>

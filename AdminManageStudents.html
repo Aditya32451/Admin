@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Students</title>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+            background: url(Images/hs01.jpg) no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+        }
+
+        .nav-bar {
+            background-color: #333;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .nav-bar a {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+
+        .nav-bar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            background: #FFFFFF;
+            opacity: 99%;
+            max-width: 90%;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.2), 0 5px 5px 0 rgba(0, 0, 0, 0.24);
+            border-radius: 10px;
+        }
+
+        .container h1 {
+            margin-bottom: 20px;
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+        }
+
+        .filters {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .filters select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .student-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .student-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .student-list th,
+        .student-list td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .student-list th {
+            background-color: #f2f2f2;
+        }
+
+        .edit-form, .details-form {
+            display: none;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .edit-form input,
+        .edit-form select,
+        .details-form input,
+        .details-form select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .edit-form button, .details-form button {
+            background-color: #008CBA;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .edit-form button:hover, .details-form button:hover {
+            background-color: #005f8c;
+        }
+
+        .back-button {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav-bar">
+        <a href="AdminDashboard.html">Dashboard</a>
+        <a href="AdminManageCoaches.html">Manage Coaches</a>
+        <a href="AdminManageStudents.html">Manage Students</a>
+        <a href="AdminManageECAs.html">Manage ECAs</a>
+        <a href="AdminSystemSettings.html">System Settings</a>
+        <a href="AdminActivityLog.html">Activity Log</a>
+        <a href="AdminProfile.html">Profile</a>
+    </div>
+
+    <div class="container">
+        <h1>Manage Students</h1>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search by name" />
+        </div>
+        <div class="filters">
+            <select id="classFilter">
+                <option value="">All Classes</option>
+            </select>
+            <select id="ecaFilter">
+                <option value="">All ECAs</option>
+            </select>
+        </div>
+        <div class="student-list">
+            <table id="studentTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Class</th>
+                        <th>ECA</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="studentTableBody">
+                    <!-- Student data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        <div class="edit-form" id="editForm">
+            <h2>Edit Student Information</h2>
+            <input type="text" id="editName" placeholder="Name" />
+            <select id="editClass">
+                <!-- Class options will be populated here -->
+            </select>
+            <div id="editECAs">
+                <!-- ECA checkboxes will be populated here -->
+            </div>
+            <div id="additionalFields">
+                <!-- Additional fields will be populated here -->
+            </div>
+            <button id="saveStudentButton">Save Changes</button>
+            <button class="back-button" id="backButton">Back</button>
+        </div>
+
+        <div class="details-form" id="detailsForm">
+            <h2>View Student Details</h2>
+            <div id="studentDetails"></div>
+            <button class="back-button" id="detailsBackButton">Back</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, getDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgwQZwXyDCdC9n2qOYH1mWX22KujsG5Ys",
+            authDomain: "eca-program.firebaseapp.com",
+            projectId: "eca-program",
+            storageBucket: "eca-program.appspot.com",
+            messagingSenderId: "116171510985",
+            appId: "1:116171510985:web:12baf1351a622460b22918"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        let currentStudentId = null;
+
+        const populateFilters = async () => {
+            const classFilter = document.getElementById("classFilter");
+            const ecaFilter = document.getElementById("ecaFilter");
+
+            const ecaRef = collection(db, 'ecaInfo');
+            const ecaSnapshot = await getDocs(ecaRef);
+
+            ecaSnapshot.forEach(doc => {
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = doc.id;
+                ecaFilter.appendChild(option);
+            });
+
+            for (let i = 1; i <= 12; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `Class ${i}`;
+                classFilter.appendChild(option);
+            }
+        };
+
+        const populateStudentList = async () => {
+            const studentTableBody = document.getElementById("studentTableBody");
+            studentTableBody.innerHTML = ''; // Clear existing data
+
+            const studentRef = collection(db, 'studentInfo');
+            const studentSnapshot = await getDocs(studentRef);
+
+            const students = [];
+            studentSnapshot.forEach(doc => {
+                const studentData = doc.data();
+                students.push({
+                    id: doc.id,
+                    name: studentData.Name || 'N/A',
+                    class: studentData.Class || 'N/A',
+                    ecas: studentData.ECAs || [],
+                });
+            });
+
+            students.sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically by name
+
+            students.forEach(student => {
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `
+                    <td>${student.name}</td>
+                    <td>${student.class}</td>
+                    <td>${student.ecas.join(', ')}</td>
+                    <td>
+                        <button class="edit-btn" data-id="${student.id}">Edit</button>
+                        <button class="view-details-btn" data-id="${student.id}">View Details</button>
+                    </td>
+                `;
+
+                studentTableBody.appendChild(tr);
+            });
+
+            addEventListenersToButtons(); // Add event listeners after populating the list
+        };
+
+        const filterStudents = async () => {
+            const searchInput = document.getElementById("searchInput").value.toLowerCase();
+            const classFilter = document.getElementById("classFilter").value;
+            const ecaFilter = document.getElementById("ecaFilter").value;
+
+            const studentTableBody = document.getElementById("studentTableBody");
+            studentTableBody.innerHTML = ''; // Clear existing data
+
+            const studentRef = collection(db, 'studentInfo');
+            const studentSnapshot = await getDocs(studentRef);
+
+            const students = [];
+            studentSnapshot.forEach(doc => {
+                const studentData = doc.data();
+                const studentName = studentData.Name.toLowerCase();
+                const studentClass = studentData.Class;
+                const studentECAs = studentData.ECAs || [];
+
+                if (
+                    (studentName.includes(searchInput) || !searchInput) &&
+                    (studentClass == classFilter || !classFilter) &&
+                    (studentECAs.includes(ecaFilter) || !ecaFilter)
+                ) {
+                    students.push({
+                        id: doc.id,
+                        name: studentData.Name || 'N/A',
+                        class: studentData.Class || 'N/A',
+                        ecas: studentECAs.join(', ') || 'N/A',
+                    });
+                }
+            });
+
+            students.sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically by name
+
+            students.forEach(student => {
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `
+                    <td>${student.name}</td>
+                    <td>${student.class}</td>
+                    <td>${student.ecas}</td>
+                    <td>
+                        <button class="edit-btn" data-id="${student.id}">Edit</button>
+                        <button class="view-details-btn" data-id="${student.id}">View Details</button>
+                    </td>
+                `;
+
+                studentTableBody.appendChild(tr);
+            });
+
+            addEventListenersToButtons(); // Add event listeners after filtering
+        };
+
+        const addEventListenersToButtons = () => {
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const studentId = event.target.getAttribute('data-id');
+                    editStudent(studentId);
+                });
+            });
+
+            document.querySelectorAll('.view-details-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const studentId = event.target.getAttribute('data-id');
+                    viewDetails(studentId);
+                });
+            });
+        };
+
+        const editStudent = async (studentId) => {
+            currentStudentId = studentId;
+            const studentDocRef = doc(db, "studentInfo", studentId);
+            const studentDocSnap = await getDoc(studentDocRef);
+
+            if (studentDocSnap.exists()) {
+                const studentData = studentDocSnap.data();
+                document.getElementById('editName').value = studentData.Name || '';
+                document.getElementById('editClass').value = studentData.Class || '';
+
+                const ecaRef = collection(db, 'ecaInfo');
+                const ecaSnapshot = await getDocs(ecaRef);
+                const editECAsDiv = document.getElementById('editECAs');
+                editECAsDiv.innerHTML = '';
+
+                ecaSnapshot.forEach(doc => {
+                    const checkboxItem = document.createElement('div');
+                    checkboxItem.className = 'checkbox-item';
+
+                    const label = document.createElement('label');
+                    label.textContent = doc.id;
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = doc.id;
+                    checkbox.checked = studentData.ECAs && studentData.ECAs.includes(doc.id);
+
+                    checkboxItem.appendChild(label);
+                    checkboxItem.appendChild(checkbox);
+                    editECAsDiv.appendChild(checkboxItem);
+                });
+
+                // Load StudentInformationNeeded fields
+                const adminDocRef = doc(db, "adminInfo", "doc");
+                const adminDocSnap = await getDoc(adminDocRef);
+
+                if (adminDocSnap.exists()) {
+                    const studentInformationNeeded = adminDocSnap.data().StudentInformationNeeded || [];
+                    const additionalFieldsDiv = document.getElementById('additionalFields');
+                    additionalFieldsDiv.innerHTML = '';
+
+                    studentInformationNeeded.forEach(field => {
+                        if (field !== "Name" && field !== "Class" && field !== "ECAs") {
+                            const inputGroup = document.createElement('div');
+                            inputGroup.className = 'input-group';
+
+                            const label = document.createElement('label');
+                            label.textContent = field;
+
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.id = field;
+                            input.value = studentData[field] || '';
+
+                            inputGroup.appendChild(label);
+                            inputGroup.appendChild(input);
+                            additionalFieldsDiv.appendChild(inputGroup);
+                        }
+                    });
+                }
+
+                // Show the edit form
+                document.getElementById('editForm').style.display = 'block';
+                document.getElementById('detailsForm').style.display = 'none';
+            }
+        };
+
+        const viewDetails = async (studentId) => {
+            currentStudentId = studentId;
+            const studentDocRef = doc(db, "studentInfo", studentId);
+            const studentDocSnap = await getDoc(studentDocRef);
+
+            if (studentDocSnap.exists()) {
+                const studentData = studentDocSnap.data();
+                const studentDetailsDiv = document.getElementById('studentDetails');
+                studentDetailsDiv.innerHTML = `<h3>${studentData.Name}</h3><p>Class: ${studentData.Class}</p><p>ECAs: ${studentData.ECAs.join(', ')}</p>`;
+
+                studentData.ECAs.forEach(async (ecaName) => {
+                    const ecaAttendanceDocRef = doc(db, "ecaAttendance", ecaName);
+                    const ecaAttendanceDocSnap = await getDoc(ecaAttendanceDocRef);
+
+                    const ecaCommentsDocRef = doc(db, "ecaComments", ecaName);
+                    const ecaCommentsDocSnap = await getDoc(ecaCommentsDocRef);
+
+                    if (ecaAttendanceDocSnap.exists()) {
+                        const attendanceData = ecaAttendanceDocSnap.data();
+                        const attendanceDates = Object.keys(attendanceData);
+                        const studentAttendance = attendanceDates.filter(date => attendanceData[date].includes(studentId));
+
+                        const attendancePercentage = ((studentAttendance.length / attendanceDates.length) * 100).toFixed(2);
+                        studentDetailsDiv.innerHTML += `<h4>Attendance for ${ecaName}</h4><p>Attendance Percentage: ${attendancePercentage}%</p><p>Attendance Dates: ${studentAttendance.join(', ')}</p>`;
+                    } else {
+                        studentDetailsDiv.innerHTML += `<h4>Attendance for ${ecaName}</h4><p>No attendance data available.</p>`;
+                    }
+
+                    if (ecaCommentsDocSnap.exists()) {
+                        const commentsData = ecaCommentsDocSnap.data();
+                        const studentComments = Object.values(commentsData).filter(comment => comment[0] === studentId);
+
+                        studentDetailsDiv.innerHTML += `<h4>Comments for ${ecaName}</h4><ul>${studentComments.map(comment => `<li>${comment[2]}: ${comment[1]}</li>`).join('')}</ul>`;
+                    } else {
+                        studentDetailsDiv.innerHTML += `<h4>Comments for ${ecaName}</h4><p>No comments available.</p>`;
+                    }
+                });
+
+                // Show the details form
+                document.getElementById('detailsForm').style.display = 'block';
+                document.getElementById('editForm').style.display = 'none';
+            }
+        };
+
+        const saveStudent = async () => {
+            if (currentStudentId) {
+                const studentDocRef = doc(db, "studentInfo", currentStudentId);
+
+                const updatedStudentData = {
+                    Name: document.getElementById('editName').value,
+                    Class: document.getElementById('editClass').value,
+                    ECAs: Array.from(document.querySelectorAll('#editECAs input:checked')).map(cb => cb.value),
+                };
+
+                // Add additional fields from StudentInformationNeeded
+                const additionalFieldsDiv = document.getElementById('additionalFields');
+                Array.from(additionalFieldsDiv.querySelectorAll('input')).forEach(input => {
+                    updatedStudentData[input.id] = input.value;
+                });
+
+                await updateDoc(studentDocRef, updatedStudentData);
+                alert('Student details updated successfully.');
+
+                // Hide the edit form and refresh the list
+                hideEditForm();
+                populateStudentList();
+            }
+        };
+
+        const hideEditForm = () => {
+            document.getElementById('editForm').style.display = 'none';
+            document.getElementById('detailsForm').style.display = 'none';
+            currentStudentId = null;
+        };
+
+        document.getElementById("saveStudentButton").addEventListener("click", saveStudent);
+        document.getElementById("backButton").addEventListener("click", hideEditForm);
+        document.getElementById("detailsBackButton").addEventListener("click", hideEditForm);
+
+        document.addEventListener("DOMContentLoaded", () => {
+            populateFilters();
+            populateStudentList();
+
+            document.getElementById("searchInput").addEventListener("input", filterStudents);
+            document.getElementById("classFilter").addEventListener("change", filterStudents);
+            document.getElementById("ecaFilter").addEventListener("change", filterStudents);
+        });
+    </script>
+</body>
+
+</html>

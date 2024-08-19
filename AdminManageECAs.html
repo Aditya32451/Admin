@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage ECAs</title>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+            background: url(Images/hs01.jpg) no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+        }
+
+        .nav-bar {
+            background-color: #333;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .nav-bar a {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+
+        .nav-bar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            background: #FFFFFF;
+            opacity: 99%;
+            max-width: 90%;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.2), 0 5px 5px 0 rgba(0, 0, 0, 0.24);
+            border-radius: 10px;
+        }
+
+        .container h1 {
+            margin-bottom: 20px;
+        }
+
+        .eca-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .eca-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .eca-list th,
+        .eca-list td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .eca-list th {
+            background-color: #f2f2f2;
+        }
+
+        .edit-form,
+        .add-form {
+            display: none;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .edit-form input,
+        .edit-form select,
+        .add-form input,
+        .add-form select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .edit-form button,
+        .add-form button {
+            background-color: #008CBA;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .edit-form button:hover,
+        .add-form button:hover {
+            background-color: #005f8c;
+        }
+
+        .back-button {
+            margin-top: 20px;
+        }
+
+        .add-eca-button {
+            margin-top: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .add-eca-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav-bar">
+        <a href="AdminDashboard.html">Dashboard</a>
+        <a href="AdminManageCoaches.html">Manage Coaches</a>
+        <a href="AdminManageStudents.html">Manage Students</a>
+        <a href="AdminManageECAs.html">Manage ECAs</a>
+        <a href="AdminSystemSettings.html">System Settings</a>
+        <a href="AdminActivityLog.html">Activity Log</a>
+        <a href="AdminProfile.html">Profile</a>
+    </div>
+
+    <div class="container">
+        <h1>Manage ECAs</h1>
+        <button class="add-eca-button" id="addECAButton">Add New ECA</button>
+        <div class="eca-list">
+            <table id="ecaTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Classes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ecaTableBody">
+                    <!-- ECA data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="edit-form" id="editForm">
+            <h2>Edit ECA Information</h2>
+            <input type="text" id="editName" placeholder="ECA Name" readonly />
+            <div id="editClasses">
+                <!-- Class checkboxes will be populated here -->
+            </div>
+            <div id="editAdditionalFields">
+                <!-- Additional fields will be populated here -->
+            </div>
+            <button id="saveECAButton">Save Changes</button>
+            <button class="back-button" id="editBackButton">Back</button>
+        </div>
+
+        <div class="add-form" id="addForm">
+            <h2>Add New ECA</h2>
+            <input type="text" id="addName" placeholder="ECA Name" />
+            <div id="addClasses">
+                <!-- Class checkboxes will be populated here -->
+            </div>
+            <div id="addAdditionalFields">
+                <!-- Additional fields will be populated here -->
+            </div>
+            <button id="createECAButton">Create ECA</button>
+            <button class="back-button" id="addBackButton">Back</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, getDoc, setDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgwQZwXyDCdC9n2qOYH1mWX22KujsG5Ys",
+            authDomain: "eca-program.firebaseapp.com",
+            projectId: "eca-program",
+            storageBucket: "eca-program.appspot.com",
+            messagingSenderId: "116171510985",
+            appId: "1:116171510985:web:12baf1351a622460b22918"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        let currentECAName = null;
+
+        const populateECATable = async () => {
+            const ecaTableBody = document.getElementById("ecaTableBody");
+            ecaTableBody.innerHTML = ''; // Clear existing data
+
+            const ecaRef = collection(db, 'ecaInfo');
+            const ecaSnapshot = await getDocs(ecaRef);
+
+            ecaSnapshot.forEach(doc => {
+                const ecaData = doc.data();
+                const tr = document.createElement('tr');
+
+                const classRange = ecaData.Class || [];
+                const classRangeText = classRange.length > 0 ? `${Math.min(...classRange)}-${Math.max(...classRange)}` : "N/A";
+
+                tr.innerHTML = `
+                    <td>${doc.id}</td>
+                    <td>${classRangeText}</td>
+                    <td><button class="edit-btn" data-id="${doc.id}">Edit</button></td>
+                `;
+
+                ecaTableBody.appendChild(tr);
+            });
+
+            addEventListenersToButtons(); // Add event listeners after populating the list
+        };
+
+        const addEventListenersToButtons = () => {
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const ecaName = event.target.getAttribute('data-id');
+                    editECA(ecaName);
+                });
+            });
+
+            document.getElementById("addECAButton").addEventListener("click", () => {
+                document.getElementById('editForm').style.display = 'none';
+                document.getElementById('addForm').style.display = 'block';
+                loadAddFormFields(); // Load fields for adding ECA
+            });
+
+            document.getElementById("editBackButton").addEventListener("click", hideForms);
+            document.getElementById("addBackButton").addEventListener("click", hideForms);
+            document.getElementById("createECAButton").addEventListener("click", createECA);
+        };
+
+        const loadAddFormFields = async () => {
+            const adminDocRef = doc(db, "adminInfo", "doc");
+            const adminDocSnap = await getDoc(adminDocRef);
+
+            if (adminDocSnap.exists()) {
+                const ecaInformationNeeded = adminDocSnap.data().ECAInformationNeeded || [];
+                const classCheckboxGroup = document.getElementById('addClasses');
+                classCheckboxGroup.innerHTML = '';
+
+                for (let i = 1; i <= 12; i++) {
+                    const checkboxItem = document.createElement('div');
+                    checkboxItem.className = 'checkbox-item';
+
+                    const label = document.createElement('label');
+                    label.textContent = `Class ${i}`;
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = i;
+
+                    checkboxItem.appendChild(label);
+                    checkboxItem.appendChild(checkbox);
+                    classCheckboxGroup.appendChild(checkboxItem);
+                }
+
+                const addAdditionalFields = document.getElementById('addAdditionalFields');
+                addAdditionalFields.innerHTML = '';
+
+                ecaInformationNeeded.forEach(field => {
+                    const inputGroup = document.createElement('div');
+                    inputGroup.className = 'input-group';
+
+                    const label = document.createElement('label');
+                    label.textContent = field;
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = field;
+
+                    inputGroup.appendChild(label);
+                    inputGroup.appendChild(input);
+                    addAdditionalFields.appendChild(inputGroup);
+                });
+            }
+        };
+
+        const editECA = async (ecaName) => {
+            currentECAName = ecaName;
+            const ecaDocRef = doc(db, "ecaInfo", ecaName);
+            const ecaDocSnap = await getDoc(ecaDocRef);
+
+            if (ecaDocSnap.exists()) {
+                const ecaData = ecaDocSnap.data();
+                document.getElementById('editName').value = ecaName;
+
+                const classCheckboxGroup = document.getElementById('editClasses');
+                classCheckboxGroup.innerHTML = '';
+
+                for (let i = 1; i <= 12; i++) {
+                    const checkboxItem = document.createElement('div');
+                    checkboxItem.className = 'checkbox-item';
+
+                    const label = document.createElement('label');
+                    label.textContent = `Class ${i}`;
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = i;
+                    checkbox.checked = ecaData.Class && ecaData.Class.includes(i);
+
+                    checkboxItem.appendChild(label);
+                    checkboxItem.appendChild(checkbox);
+                    classCheckboxGroup.appendChild(checkboxItem);
+                }
+
+                const adminDocRef = doc(db, "adminInfo", "doc");
+                const adminDocSnap = await getDoc(adminDocRef);
+
+                if (adminDocSnap.exists()) {
+                    const ecaInformationNeeded = adminDocSnap.data().ECAInformationNeeded || [];
+                    const additionalFieldsDiv = document.getElementById('editAdditionalFields');
+                    additionalFieldsDiv.innerHTML = '';
+
+                    ecaInformationNeeded.forEach(field => {
+                        if (field !== "Students") {
+                            const inputGroup = document.createElement('div');
+                            inputGroup.className = 'input-group';
+
+                            const label = document.createElement('label');
+                            label.textContent = field;
+
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.id = field;
+                            input.value = ecaData[field] || '';
+
+                            inputGroup.appendChild(label);
+                            inputGroup.appendChild(input);
+                            additionalFieldsDiv.appendChild(inputGroup);
+                        }
+                    });
+                }
+
+                // Show the edit form
+                document.getElementById('editForm').style.display = 'block';
+                document.getElementById('addForm').style.display = 'none';
+            }
+        };
+
+        const createECA = async () => {
+            const ecaName = document.getElementById('addName').value.trim();
+            if (!ecaName) {
+                alert("ECA Name is required.");
+                return;
+            }
+
+            const selectedClasses = Array.from(document.querySelectorAll('#addClasses input:checked')).map(cb => parseInt(cb.value));
+            const ecaData = { Class: selectedClasses };
+
+            const adminDocRef = doc(db, "adminInfo", "doc");
+            const adminDocSnap = await getDoc(adminDocRef);
+
+            if (adminDocSnap.exists()) {
+                const ecaInformationNeeded = adminDocSnap.data().ECAInformationNeeded || [];
+
+                ecaInformationNeeded.forEach(field => {
+                    const value = document.getElementById(field).value.trim();
+                    ecaData[field] = value;
+                });
+            }
+
+            await setDoc(doc(db, "ecaInfo", ecaName), ecaData);
+            alert('New ECA added successfully.');
+
+            hideForms();
+            populateECATable();
+        };
+
+        const saveECA = async () => {
+            if (currentECAName) {
+                const ecaDocRef = doc(db, "ecaInfo", currentECAName);
+
+                const updatedECAData = {
+                    Class: Array.from(document.querySelectorAll('#editClasses input:checked')).map(cb => parseInt(cb.value))
+                };
+
+                // Add additional fields from ECAInformationNeeded
+                const additionalFieldsDiv = document.getElementById('editAdditionalFields');
+                Array.from(additionalFieldsDiv.querySelectorAll('input')).forEach(input => {
+                    updatedECAData[input.id] = input.value;
+                });
+
+                await updateDoc(ecaDocRef, updatedECAData);
+                alert('ECA details updated successfully.');
+
+                // Hide the edit form and refresh the list
+                hideForms();
+                populateECATable();
+            }
+        };
+
+        const hideForms = () => {
+            document.getElementById('editForm').style.display = 'none';
+            document.getElementById('addForm').style.display = 'none';
+            currentECAName = null;
+        };
+
+        document.getElementById("saveECAButton").addEventListener("click", saveECA);
+
+        document.addEventListener("DOMContentLoaded", () => {
+            populateECATable();
+        });
+    </script>
+</body>
+
+</html>

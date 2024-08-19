@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Settings</title>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+            background: url(Images/hs01.jpg) no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+        }
+
+        .nav-bar {
+            background-color: #333;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .nav-bar a {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+
+        .nav-bar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            background: #FFFFFF;
+            opacity: 99%;
+            max-width: 90%;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.2), 0 5px 5px 0 rgba(0, 0, 0, 0.24);
+            border-radius: 10px;
+        }
+
+        .container h1 {
+            margin-bottom: 20px;
+        }
+
+        .settings-form {
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        .settings-form label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .settings-form input[type="text"],
+        .settings-form input[type="number"],
+        .settings-form select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .settings-form input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .settings-form .array-group {
+            margin-bottom: 20px;
+        }
+
+        .settings-form .array-group ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .settings-form .array-group ul li {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .settings-form .array-group button {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .settings-form .array-group button:hover {
+            background-color: #c9302c;
+        }
+
+        .settings-form .array-group .add-button {
+            background-color: #5cb85c;
+            margin-top: 10px;
+        }
+
+        .settings-form .array-group .add-button:hover {
+            background-color: #4cae4c;
+        }
+
+        .settings-form button {
+            background-color: #008CBA;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .settings-form button:hover {
+            background-color: #005f8c;
+        }
+
+        .settings-form .input-group {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav-bar">
+        <a href="AdminDashboard.html">Dashboard</a>
+        <a href="AdminManageCoaches.html">Manage Coaches</a>
+        <a href="AdminManageStudents.html">Manage Students</a>
+        <a href="AdminManageECAs.html">Manage ECAs</a>
+        <a href="AdminSystemSettings.html">System Settings</a>
+        <a href="AdminActivityLog.html">Activity Log</a>
+        <a href="AdminProfile.html">Profile</a>
+    </div>
+
+    <div class="container">
+        <h1>System Settings</h1>
+        <div class="settings-form" id="settingsForm">
+            <label for="canStudentsChangeECAs">Allow Students to Change ECAs</label>
+            <input type="checkbox" id="canStudentsChangeECAs" />
+
+            <label for="CoachDetails">Coach Details</label>
+            <div class="array-group">
+                <ul id="CoachDetailsList"></ul>
+                <button class="add-button" id="addCoachDetailButton">Add</button>
+            </div>
+
+            <label for="ECAInformationNeeded">ECA Information Needed</label>
+            <div class="array-group">
+                <ul id="ECAInformationNeededList"></ul>
+                <button class="add-button" id="addECAInformationButton">Add</button>
+            </div>
+
+            <label for="maxECAs">Max ECAs per Student</label>
+            <input type="number" id="maxECAs" min="1" />
+
+            <label for="securityCode">Security Code</label>
+            <input type="text" id="securityCode" />
+
+            <label for="StudentInformationNeeded">Student Information Needed</label>
+            <div class="array-group">
+                <ul id="StudentInformationNeededList"></ul>
+                <button class="add-button" id="addStudentInformationButton">Add</button>
+            </div>
+
+            <button id="saveSettingsButton">Save Settings</button>
+        </div>
+    </div>
+
+    <script type="module">
+
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getFirestore, doc, getDoc, updateDoc, setDoc, arrayUnion, arrayRemove, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAgwQZwXyDCdC9n2qOYH1mWX22KujsG5Ys",
+    authDomain: "eca-program.firebaseapp.com",
+    projectId: "eca-program",
+    storageBucket: "eca-program.appspot.com",
+    messagingSenderId: "116171510985",
+    appId: "1:116171510985:web:12baf1351a622460b22918"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const loadSettings = async () => {
+    const adminDocRef = doc(db, "adminInfo", "doc");
+    const adminDocSnap = await getDoc(adminDocRef);
+
+    if (adminDocSnap.exists()) {
+        const adminData = adminDocSnap.data();
+
+        document.getElementById("canStudentsChangeECAs").checked = adminData.CanStudentsChangeECAs || false;
+        document.getElementById("maxECAs").value = adminData.MaxECAs || 1;
+        document.getElementById("securityCode").value = adminData.SecurityCode || '';
+
+        populateArrayList("CoachDetailsList", adminData.CoachDetails);
+        populateArrayList("ECAInformationNeededList", adminData.ECAInformationNeeded);
+        populateArrayList("StudentInformationNeededList", adminData.StudentInformationNeeded);
+    }
+};
+
+const populateArrayList = (elementId, items) => {
+    const list = document.getElementById(elementId);
+    list.innerHTML = ''; // Clear existing data
+
+    if (items) {
+        items.forEach((item) => {
+            const li = document.createElement("li");
+            li.textContent = item;
+            const removeButton = document.createElement("button");
+            removeButton.textContent = "Remove";
+            removeButton.addEventListener("click", () => {
+                switch (elementId) {
+                    case "CoachDetailsList":
+                        removeCoachDetail(item);
+                        break;
+                    case "ECAInformationNeededList":
+                        removeECAInformation(item);
+                        break;
+                    case "StudentInformationNeededList":
+                        removeStudentInformation(item);
+                        break;
+                }
+            });
+            li.appendChild(removeButton);
+            list.appendChild(li);
+        });
+    }
+};
+
+// Separate function to handle removing CoachDetails fields
+const removeCoachDetail = async (item) => {
+    const adminDocRef = doc(db, "adminInfo", "doc");
+
+    // Remove the item from the CoachDetails array in admin doc
+    await updateDoc(adminDocRef, {
+        CoachDetails: arrayRemove(item)
+    });
+
+    // Fetch all documents from the coachInfo collection
+    const coachCollectionRef = collection(db, "coachInfo");
+    const coachDocsSnapshot = await getDocs(coachCollectionRef);
+
+    // Iterate over each document and remove the field if it exists
+    for (const docSnap of coachDocsSnapshot.docs) {
+        const data = docSnap.data();
+        if (data.hasOwnProperty(item)) {
+            const updatedData = { ...data };
+            delete updatedData[item];
+            await setDoc(docSnap.ref, updatedData);
+        }
+    }
+
+    loadSettings(); // Refresh settings
+};
+
+
+// Separate function to handle removing ECAInformationNeeded fields
+const removeECAInformation = async (item) => {
+    const adminDocRef = doc(db, "adminInfo", "doc");
+
+    // Remove the item from the ECAInformationNeeded array in admin doc
+    await updateDoc(adminDocRef, {
+        ECAInformationNeeded: arrayRemove(item)
+    });
+
+    // Fetch all documents from the ecaInfo collection
+    const ecaCollectionRef = collection(db, "ecaInfo");
+    const ecaDocsSnapshot = await getDocs(ecaCollectionRef);
+
+    // Iterate over each document and remove the field if it exists
+    for (const docSnap of ecaDocsSnapshot.docs) {
+        const data = docSnap.data();
+        if (data.hasOwnProperty(item)) {
+            const updatedData = { ...data };
+            delete updatedData[item];
+            await setDoc(docSnap.ref, updatedData);
+        }
+    }
+
+    loadSettings(); // Refresh settings
+};
+
+
+
+
+// Separate function to handle removing StudentInformationNeeded fields
+const removeStudentInformation = async (item) => {
+    const adminDocRef = doc(db, "adminInfo", "doc");
+
+    // Remove the item from the StudentInformationNeeded array in admin doc
+    await updateDoc(adminDocRef, {
+        StudentInformationNeeded: arrayRemove(item)
+    });
+
+    // Fetch all documents from the studentInfo collection
+    const studentCollectionRef = collection(db, "studentInfo");
+    const studentDocsSnapshot = await getDocs(studentCollectionRef);
+
+    // Iterate over each document and remove the field if it exists
+    for (const docSnap of studentDocsSnapshot.docs) {
+        const data = docSnap.data();
+        if (data.hasOwnProperty(item)) {
+            const updatedData = { ...data };
+            delete updatedData[item];
+            await setDoc(docSnap.ref, updatedData);
+        }
+    }
+
+    loadSettings(); // Refresh settings
+};
+
+
+// Separate function to handle adding CoachDetails fields
+const addCoachDetail = async () => {
+    const newItem = prompt("Enter new Coach Detail:");
+    if (newItem) {
+        const adminDocRef = doc(db, "adminInfo", "doc");
+
+        await updateDoc(adminDocRef, {
+            CoachDetails: arrayUnion(newItem)
+        });
+
+        const coachCollectionRef = collection(db, "coachInfo");
+        const coachDocsSnapshot = await getDocs(coachCollectionRef);
+
+        coachDocsSnapshot.forEach(async (docSnap) => {
+            const data = docSnap.data();
+            data[newItem] = "";  // Add the new field with a blank string value
+            await updateDoc(docSnap.ref, data);  // Update the document with the modified data
+        });
+
+        loadSettings(); // Refresh settings
+    }
+};
+
+// Separate function to handle adding ECAInformationNeeded fields
+const addECAInformation = async () => {
+    const newItem = prompt("Enter new ECA Information:");
+    if (newItem) {
+        const adminDocRef = doc(db, "adminInfo", "doc");
+
+        await updateDoc(adminDocRef, {
+            ECAInformationNeeded: arrayUnion(newItem)
+        });
+
+        const ecaCollectionRef = collection(db, "ecaInfo");
+        const ecaDocsSnapshot = await getDocs(ecaCollectionRef);
+
+        ecaDocsSnapshot.forEach(async (docSnap) => {
+            const data = docSnap.data();
+            data[newItem] = "";  // Add the new field with a blank string value
+            await updateDoc(docSnap.ref, data);  // Update the document with the modified data
+        });
+
+        loadSettings(); // Refresh settings
+    }
+};
+
+// Separate function to handle adding StudentInformationNeeded fields
+const addStudentInformation = async () => {
+    const newItem = prompt("Enter new Student Information:");
+    if (newItem) {
+        const adminDocRef = doc(db, "adminInfo", "doc");
+
+        await updateDoc(adminDocRef, {
+            StudentInformationNeeded: arrayUnion(newItem)
+        });
+
+        const studentCollectionRef = collection(db, "studentInfo");
+        const studentDocsSnapshot = await getDocs(studentCollectionRef);
+
+        studentDocsSnapshot.forEach(async (docSnap) => {
+            const data = docSnap.data();
+            data[newItem] = "";  // Add the new field with a blank string value
+            await updateDoc(docSnap.ref, data);  // Update the document with the modified data
+        });
+
+        loadSettings(); // Refresh settings
+    }
+};
+
+const saveSettings = async () => {
+    const canStudentsChangeECAs = document.getElementById("canStudentsChangeECAs").checked;
+    const maxECAs = document.getElementById("maxECAs").value;
+    const securityCode = document.getElementById("securityCode").value;
+
+    const adminDocRef = doc(db, "adminInfo", "doc");
+
+    await updateDoc(adminDocRef, {
+        CanStudentsChangeECAs: canStudentsChangeECAs,
+        MaxECAs: maxECAs,
+        SecurityCode: securityCode
+    });
+
+    alert("Settings updated successfully.");
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadSettings();
+
+    document.getElementById("addCoachDetailButton").addEventListener("click", addCoachDetail);
+    document.getElementById("addECAInformationButton").addEventListener("click", addECAInformation);
+    document.getElementById("addStudentInformationButton").addEventListener("click", addStudentInformation);
+
+    document.getElementById("saveSettingsButton").addEventListener("click", saveSettings);
+});
+
+    </script>
+    
+</body>
+
+</html>
