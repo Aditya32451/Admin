@@ -355,32 +355,63 @@
         };
 
         const createECA = async () => {
-            const ecaName = document.getElementById('addName').value.trim();
-            if (!ecaName) {
-                alert("ECA Name is required.");
-                return;
+            try {
+                const ecaName = document.getElementById('addName').value.trim();
+                if (!ecaName) {
+                    alert("ECA Name is required.");
+                    return;
+                }
+        
+                const selectedClasses = Array.from(document.querySelectorAll('#addClasses input:checked'))
+                    .map(cb => parseInt(cb.value));
+                if (selectedClasses.length === 0) {
+                    alert("At least one class must be selected.");
+                    return;
+                }
+        
+                // Create the ECA data object with the selected classes and ECA name
+                const ecaData = { 
+                    Class: selectedClasses,
+                    Name: ecaName  // Add the Name field with the ECA name
+                };
+        
+                const adminDocRef = doc(db, "adminInfo", "doc");
+                const adminDocSnap = await getDoc(adminDocRef);
+        
+                if (adminDocSnap.exists()) {
+                    const ecaInformationNeeded = adminDocSnap.data().ECAInformationNeeded || [];
+        
+                    ecaInformationNeeded.forEach(field => {
+                        const element = document.getElementById(field);
+                        if (element) {
+                            const value = element.value.trim();
+                            ecaData[field] = value || "";  // Default to empty string if no value
+                        } else {
+                            console.warn(`Element with id ${field} not found.`);
+                        }
+                    });
+                } else {
+                    alert("Admin document not found.");
+                    return;
+                }
+        
+                // Create the ECA document in ecaInfo collection
+                await setDoc(doc(db, "ecaInfo", ecaName), ecaData);
+        
+                // Create an empty document in ecaComments with the ECA name as the document ID
+                await setDoc(doc(db, "ecaComments", ecaName), {});
+        
+                // Create an empty document in ecaAttendance with the ECA name as the document ID
+                await setDoc(doc(db, "ecaAttendance", ecaName), {});
+        
+                alert('New ECA added successfully.');
+        
+                hideForms();
+                populateECATable();
+            } catch (error) {
+                console.error("Error creating ECA:", error);
+                alert("An error occurred while creating the ECA. Please try again.");
             }
-
-            const selectedClasses = Array.from(document.querySelectorAll('#addClasses input:checked')).map(cb => parseInt(cb.value));
-            const ecaData = { Class: selectedClasses };
-
-            const adminDocRef = doc(db, "adminInfo", "doc");
-            const adminDocSnap = await getDoc(adminDocRef);
-
-            if (adminDocSnap.exists()) {
-                const ecaInformationNeeded = adminDocSnap.data().ECAInformationNeeded || [];
-
-                ecaInformationNeeded.forEach(field => {
-                    const value = document.getElementById(field).value.trim();
-                    ecaData[field] = value;
-                });
-            }
-
-            await setDoc(doc(db, "ecaInfo", ecaName), ecaData);
-            alert('New ECA added successfully.');
-
-            hideForms();
-            populateECATable();
         };
 
         const saveECA = async () => {
